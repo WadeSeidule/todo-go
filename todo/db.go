@@ -2,9 +2,10 @@ package todo
 
 import (
 	"fmt"
-	"strings"
-	"github.com/jmoiron/sqlx"
 	"os"
+	"strings"
+
+	"github.com/jmoiron/sqlx"
 )
 
 var db *DB
@@ -35,7 +36,7 @@ func (d *DB) Close() {
 	}
 }
 
-func (d *DB) CreateTable(table string, columns map[string]string ) {
+func (d *DB) CreateTable(table string, columns map[string]string) {
 	template := "CREATE TABLE IF NOT EXISTS %s (%s)"
 	colTemplate := "%s %s"
 	cols := []string{}
@@ -45,7 +46,6 @@ func (d *DB) CreateTable(table string, columns map[string]string ) {
 	query := fmt.Sprintf(template, table, strings.Join(cols, ","))
 	d.engine.MustExec(query)
 }
-
 
 func NewDB(source string) *DB {
 	db = &DB{source: source}

@@ -8,6 +8,7 @@ import (
 
 type Commands struct {
 	Commands map[string]*Command
+	Program  string
 }
 
 func (c *Commands) Contains(cmd string) (bool, *Command) {
@@ -25,20 +26,25 @@ func (c *Commands) ListCommands() string {
 
 func (c *Commands) Run(cmd string, args []string) error {
 	if cmd == "help" {
-		c.Help(cmd)
+		fmt.Print(c.HelpString())
 		return nil
 	}
 	exists, cmdStruct := c.Contains(cmd)
 	if !exists {
 		return fmt.Errorf("command '%s' not found. Expected one of '%s'", cmd, c.ListCommands())
 	}
-	return cmdStruct.Run(args)
+	err := cmdStruct.Parse(args)
+	if err != nil {
+		return err
+	}
+	return cmdStruct.Run()
 }
 
 func (c *Commands) AddCommand(cmd *Command) {
 	if c.Commands == nil {
 		c.Commands = make(map[string]*Command)
 	}
+	cmd.Program = c.Program
 	c.Commands[cmd.Name] = cmd
 }
 
@@ -50,8 +56,16 @@ func (c *Commands) ParseArgs() (string, []string, error) {
 	return flag.Args()[0], flag.Args()[1:], nil
 }
 
-func (c *Commands) Help(cmd string) {
-	for name, cmdStruct := range c.Commands {
-		fmt.Printf("%s: %s\n", name, cmdStruct.Help)
+func (c *Commands) HelpString() string {
+	helpStrings := []string{}
+	for _, cmd := range c.Commands {
+		cmdHelpString := cmd.HelpString()
+		cmdHelpString = fmt.Sprintf("Command: %s\n", cmd.Name) + cmdHelpString
+		helpStrings = append(helpStrings, cmdHelpString)
 	}
+	return strings.Join(helpStrings, "\n\n")
+}
+
+func NewCommandSet(program string) *Commands {
+	return &Commands{Program: program}
 }

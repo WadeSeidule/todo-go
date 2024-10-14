@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"todo/cli"
@@ -9,24 +8,30 @@ import (
 	"todo/todo"
 )
 
+var todoTableColsNameType = map[string]string{
+	"id":          "INTEGER PRIMARY KEY AUTOINCREMENT",
+	"description": "TEXT",
+	"completed":   "BOOLEAN",
+}
+
 func main() {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
 	}
+	todoFields := []string{}
+	for k := range todoTableColsNameType {
+		todoFields = append(todoFields, k)
+	}
 	tc := todo.NewTodoConfig()
 	tc.TodoDir = fmt.Sprintf("%s/.todo", home)
 	tc.TodoDb = "todos.db"
 	tc.TodoTable = "todos"
-	tc.TodoFields = []string{"id", "description", "completed"}
+	tc.TodoFields = todoFields
 	tc.Init()
 	db := todo.NewDB(tc.Source())
 	defer db.Close()
-	db.CreateTable("todos", map[string]string{
-		"id":          "INTEGER PRIMARY KEY AUTOINCREMENT",
-		"description": "TEXT",
-		"completed":   "BOOLEAN",
-	})
+	db.CreateTable("todos", todoTableColsNameType)
 
 	err = RunCli()
 	if err != nil {
@@ -34,16 +39,14 @@ func main() {
 	}
 }
 
-
-func getCommands() cli.Commands {
+func setCommands(cs *cli.Commands) {
 	list := cli.Command{
 		Name:    "list",
 		Handler: h.HandleList,
 		FlagTypes: []cli.FlagArg{
 			{Name: "completed", ShortName: "c", Type: "bool", Required: false, Help: "Also show completed todos."},
 		},
-		Help:    "Show completed todos. 'todos list {--completed, -c}'",
-		FlagSet: flag.NewFlagSet("list", flag.ExitOnError),
+		Help: "Show completed todos.",
 	}
 	create := cli.Command{
 		Name:    "create",
@@ -51,8 +54,7 @@ func getCommands() cli.Commands {
 		ArgTypes: []cli.PositonalArg{
 			{Name: "description", Type: "string", Required: true, Help: "The description of the todo."},
 		},
-		Help:    "Create a new todo. 'todos create [description]'",
-		FlagSet: flag.NewFlagSet("create", flag.ExitOnError),
+		Help: "Create a new todo.",
 	}
 	complete := cli.Command{
 		Name:    "complete",
@@ -60,8 +62,7 @@ func getCommands() cli.Commands {
 		ArgTypes: []cli.PositonalArg{
 			{Name: "id", Type: "int", Required: true, Help: "The id of the todo to complete."},
 		},
-		Help:    "Complete a todo. 'todos complete [id]'",
-		FlagSet: flag.NewFlagSet("complete", flag.ExitOnError),
+		Help: "Complete a todo.",
 	}
 	delete := cli.Command{
 		Name:    "delete",
@@ -69,29 +70,26 @@ func getCommands() cli.Commands {
 		ArgTypes: []cli.PositonalArg{
 			{Name: "id", Type: "int", Required: true, Help: "The id of the todo to delete."},
 		},
-		Help:    "Delete a todo. 'todos delete [id]'",
-		FlagSet: flag.NewFlagSet("delete", flag.ExitOnError),
+		Help: "Delete a todo.",
 	}
 	nukeDb := cli.Command{
 		Name:    "nuke",
 		Handler: h.HandleNuke,
-		Help:    "Delete database. 'todos nuke'",
-		FlagSet: flag.NewFlagSet("nuke", flag.ExitOnError),
+		Help:    "Delete database.",
 		FlagTypes: []cli.FlagArg{
 			{Name: "force", ShortName: "f", Type: "bool", Required: false, Help: "Force delete the database."},
 		},
 	}
-	cs := cli.Commands{}
 	cs.AddCommand(&list)
 	cs.AddCommand(&create)
 	cs.AddCommand(&complete)
 	cs.AddCommand(&delete)
 	cs.AddCommand(&nukeDb)
-	return cs
 }
 
 func RunCli() error {
-	cs := getCommands()
+	cs := cli.NewCommandSet("todo")
+	setCommands(cs)
 	cmdName, args, err := cs.ParseArgs()
 	if err != nil {
 		return err

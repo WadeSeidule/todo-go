@@ -98,7 +98,6 @@ func (t *Todo) Get() error {
 	return db.engine.Get(t, q, t.Id)
 }
 
-
 func GetTodos() ([]Todo, error) {
 	q := "SELECT * FROM todos ORDER BY id"
 	todos := []Todo{}
